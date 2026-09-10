@@ -1,0 +1,9 @@
+# Root gitignore
+node_modules/
+backend/__pycache__/
+backend/*.db
+backend/venv/
+backend/env/
+frontend/node_modules/
+frontend/dist/
+.DS_Store
