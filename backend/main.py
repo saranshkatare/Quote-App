@@ -3,6 +3,7 @@ import os
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
 from typing import List, Optional
@@ -11,9 +12,6 @@ import models
 import schemas
 from database import engine, get_db
 from seed import seed_database
-
-# Create tables
-models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="Life ke Dohe, Khatri ke Pohe - Quote API",
@@ -32,6 +30,17 @@ app.add_middleware(
 
 @app.on_event("startup")
 def startup_event():
+    # Ensure database tables exist
+    models.Base.metadata.create_all(bind=engine)
+    
+    # Auto-migrate: Add 'likes' column if missing in existing PostgreSQL / SQLite tables
+    with engine.connect() as conn:
+        try:
+            conn.execute(text("ALTER TABLE quotes ADD COLUMN IF NOT EXISTS likes INTEGER DEFAULT 0;"))
+            conn.commit()
+        except Exception as e:
+            print(f"Auto-migration note (likes column): {e}")
+
     # Seed DB with default quotes if empty
     db = next(get_db())
     seed_database(db)
