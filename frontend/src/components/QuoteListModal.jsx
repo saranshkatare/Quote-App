@@ -52,6 +52,13 @@ export default function QuoteListModal({
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const handleDelete = (e, quoteId) => {
+    e.stopPropagation();
+    if (window.confirm('Are you sure you want to delete this quote?')) {
+      onDeleteQuote(quoteId);
+    }
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -209,7 +216,7 @@ export default function QuoteListModal({
 
                           {/* Delete Button */}
                           <button
-                            onClick={() => onDeleteQuote(quote.id)}
+                            onClick={(e) => handleDelete(e, quote.id)}
                             title="Delete Quote"
                             className="p-2 rounded-xl bg-white/5 hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 transition-colors"
                           >

@@ -105,7 +105,6 @@ export function useQuotes() {
       setPalette(prev => getRandomPalette(prev.id));
     } catch (err) {
       console.warn('Backend sleeping or slow response. Using instant fallback quote:', err);
-      // Pick a different local quote so user gets immediate response
       const nextFallback = FALLBACK_QUOTES[Math.floor(Math.random() * FALLBACK_QUOTES.length)];
       setCurrentQuote(nextFallback);
       setPalette(prev => getRandomPalette(prev.id));
@@ -150,7 +149,6 @@ export function useQuotes() {
       return { success: true, likes: updatedQuote.likes };
     } catch (err) {
       console.warn('Error liking quote on server, updating locally:', err);
-      // Local UI bump if server is sleeping
       const updatedLikes = (currentQuote?.likes || 0) + 1;
       if (currentQuote && currentQuote.id === quoteId) {
         setCurrentQuote(prev => ({ ...prev, likes: updatedLikes }));
@@ -174,7 +172,7 @@ export function useQuotes() {
     setTtsLoading(false);
   };
 
-  // Deep Poet Text to Speech (Option 2: Edge Neural TTS with Option 1 Web Speech fallback)
+  // Deep Poet Text to Speech
   const playPoetTTS = async (quoteToSpeak = currentQuote) => {
     if (!quoteToSpeak) return;
 
@@ -211,7 +209,7 @@ export function useQuotes() {
     }
   };
 
-  // Option 1 Fallback: Tuned Web Speech API with deep baritone pitch (0.75) and poetic rate (0.84)
+  // Option 1 Fallback: Tuned Web Speech API
   const fallbackWebSpeechTTS = (quoteToSpeak) => {
     if (!('speechSynthesis' in window)) {
       setTtsLoading(false);
@@ -225,7 +223,6 @@ export function useQuotes() {
     const textToSay = `${quoteToSpeak.text}. By ${quoteToSpeak.author || 'Anonymous'}.`;
     const utterance = new SpeechSynthesisUtterance(textToSay);
 
-    // Deep poetic tuning
     utterance.pitch = 0.75;
     utterance.rate = 0.84;
 
@@ -300,18 +297,23 @@ export function useQuotes() {
     }
   };
 
-  // Delete quote by ID
+  // Delete quote by ID with optimistic immediate removal
   const deleteQuote = async (quoteId) => {
+    // 1. Instantly remove from frontend state
+    setQuotesList(prev => prev.filter(q => q.id !== quoteId));
+    
+    // If the currently displayed quote was deleted, load a new random quote
+    if (currentQuote && currentQuote.id === quoteId) {
+      fetchRandomQuote();
+    }
+
+    // 2. Call backend delete API
     try {
       await axios.delete(`${API_BASE_URL}/quotes/${quoteId}`, { timeout: 5000 });
-      setQuotesList(prev => prev.filter(q => q.id !== quoteId));
-      if (currentQuote && currentQuote.id === quoteId) {
-        fetchRandomQuote();
-      }
       return { success: true };
     } catch (err) {
-      console.error('Error deleting quote:', err);
-      return { success: false, error: 'Failed to delete quote.' };
+      console.warn('Backend delete note (quote removed locally):', err);
+      return { success: true };
     }
   };
 
@@ -325,7 +327,7 @@ export function useQuotes() {
   const openAddModal = () => setIsAddModalOpen(true);
   const closeAddModal = () => setIsAddModalOpen(false);
 
-  // Initial load: wake up backend silently while presenting instant content
+  // Initial load
   useEffect(() => {
     fetchRandomQuote();
     fetchAllQuotes();
