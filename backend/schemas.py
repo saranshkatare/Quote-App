@@ -12,6 +12,7 @@ class QuoteCreate(QuoteBase):
 
 class QuoteResponse(QuoteBase):
     id: int
+    likes: int = 0
     created_at: datetime
 
     class Config:

@@ -9,4 +9,5 @@ class Quote(Base):
     text = Column(String, nullable=False, index=True)
     author = Column(String, nullable=False, default="Unknown")
     category = Column(String, nullable=False, default="General", index=True)
+    likes = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)

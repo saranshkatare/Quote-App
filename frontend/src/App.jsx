@@ -14,9 +14,16 @@ export default function App() {
     fetchingNext,
     error,
     palette,
+    isPlayingTTS,
+    ttsLoading,
+    likedQuoteIds,
     isListModalOpen,
     isAddModalOpen,
     fetchRandomQuote,
+    likeQuote,
+    playPoetTTS,
+    stopPoetTTS,
+    shareQuote,
     addQuote,
     deleteQuote,
     openListModal,
@@ -24,6 +31,8 @@ export default function App() {
     openAddModal,
     closeAddModal
   } = useQuotes();
+
+  const isCurrentQuoteLiked = currentQuote ? likedQuoteIds.includes(currentQuote.id) : false;
 
   return (
     <div className={`relative min-h-screen w-full bg-gradient-to-br ${palette.bgGradient} transition-colors duration-1000 flex flex-col justify-between overflow-x-hidden selection:bg-white/20`}>
@@ -58,6 +67,13 @@ export default function App() {
           loading={loading}
           fetchingNext={fetchingNext}
           palette={palette}
+          onLikeQuote={likeQuote}
+          isLiked={isCurrentQuoteLiked}
+          onPlayTTS={playPoetTTS}
+          onStopTTS={stopPoetTTS}
+          isPlayingTTS={isPlayingTTS}
+          ttsLoading={ttsLoading}
+          onShareQuote={shareQuote}
         />
 
         <ControlButtons
@@ -78,6 +94,9 @@ export default function App() {
         onClose={closeListModal}
         quotesList={quotesList}
         onDeleteQuote={deleteQuote}
+        onLikeQuote={likeQuote}
+        likedQuoteIds={likedQuoteIds}
+        onPlayTTS={playPoetTTS}
         palette={palette}
       />
 
