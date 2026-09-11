@@ -5,10 +5,59 @@ import { getRandomPalette } from '../utils/palettes';
 // API Base URL - auto adjusts between local proxy & production environment variables
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
+// Instant local fallback quotes so the app NEVER gets stuck on loading screen during Render cold starts
+const FALLBACK_QUOTES = [
+  {
+    id: 1,
+    text: "Life ke Dohe, Khatri ke Pohe: Life is best enjoyed with warm tea, delicious pohe, and timeless wisdom.",
+    author: "Khatri Ji",
+    category: "Life",
+    likes: 42
+  },
+  {
+    id: 2,
+    text: "Dukh mein simran sab kare, sukh mein kare na koye. Jo sukh mein simran kare, to dukh kahe ko hoye.",
+    author: "Kabir Das",
+    category: "Dohe",
+    likes: 38
+  },
+  {
+    id: 3,
+    text: "Pothi padhi padhi jag mua, pandit bhaya na koye. Dhai akshar prem ka, padhe so pandit hoye.",
+    author: "Kabir Das",
+    category: "Dohe",
+    likes: 29
+  },
+  {
+    id: 4,
+    text: "Bura jo dekhn main chala, bura na milya koye. Jo dil khoja aapna, mujhse bura na koye.",
+    author: "Kabir Das",
+    category: "Dohe",
+    likes: 35
+  },
+  {
+    id: 5,
+    text: "Simplicity is the ultimate sophistication.",
+    author: "Leonardo da Vinci",
+    category: "Minimalism",
+    likes: 24
+  },
+  {
+    id: 6,
+    text: "Khatri ke Pohe gives fuel to the body, Life ke Dohe gives peace to the mind.",
+    author: "Anonymous",
+    category: "Humor",
+    likes: 50
+  }
+];
+
 export function useQuotes() {
-  const [currentQuote, setCurrentQuote] = useState(null);
-  const [quotesList, setQuotesList] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Initialize current quote immediately with a random fallback so page loads INSTANTLY!
+  const [currentQuote, setCurrentQuote] = useState(() => {
+    return FALLBACK_QUOTES[Math.floor(Math.random() * FALLBACK_QUOTES.length)];
+  });
+  const [quotesList, setQuotesList] = useState(FALLBACK_QUOTES);
+  const [loading, setLoading] = useState(false);
   const [fetchingNext, setFetchingNext] = useState(false);
   const [error, setError] = useState(null);
   
@@ -43,43 +92,49 @@ export function useQuotes() {
     }
   }, [likedQuoteIds]);
 
-  // Fetch a random quote from backend
+  // Fetch a random quote from backend with instant fallback on timeout/cold start
   const fetchRandomQuote = useCallback(async () => {
     stopPoetTTS();
     setFetchingNext(true);
     setError(null);
     try {
-      const response = await axios.get(`${API_BASE_URL}/quotes/random`);
-      setCurrentQuote(response.data);
-      // Switch to a new color palette on quote change
+      const response = await axios.get(`${API_BASE_URL}/quotes/random`, { timeout: 4000 });
+      if (response.data) {
+        setCurrentQuote(response.data);
+      }
       setPalette(prev => getRandomPalette(prev.id));
     } catch (err) {
-      console.error('Error fetching random quote:', err);
-      setError('Failed to fetch quote. Please check your backend connection.');
+      console.warn('Backend sleeping or slow response. Using instant fallback quote:', err);
+      // Pick a different local quote so user gets immediate response
+      const nextFallback = FALLBACK_QUOTES[Math.floor(Math.random() * FALLBACK_QUOTES.length)];
+      setCurrentQuote(nextFallback);
+      setPalette(prev => getRandomPalette(prev.id));
     } finally {
       setLoading(false);
       setFetchingNext(false);
     }
   }, []);
 
-  // Fetch all quotes from backend (with optional category or sort)
+  // Fetch all quotes from backend with fallback
   const fetchAllQuotes = useCallback(async (category = '', sortBy = 'newest') => {
     try {
       let url = `${API_BASE_URL}/quotes?sort_by=${sortBy}`;
-      if (category && category.upper() !== 'ALL') {
+      if (category && category.toUpperCase() !== 'ALL') {
         url += `&category=${category}`;
       }
-      const response = await axios.get(url);
-      setQuotesList(response.data);
+      const response = await axios.get(url, { timeout: 5000 });
+      if (response.data && response.data.length > 0) {
+        setQuotesList(response.data);
+      }
     } catch (err) {
-      console.error('Error fetching all quotes:', err);
+      console.warn('Backend cold start during fetchAllQuotes. Displaying cached list:', err);
     }
   }, []);
 
   // Like Quote function
   const likeQuote = async (quoteId) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/quotes/${quoteId}/like`);
+      const response = await axios.post(`${API_BASE_URL}/quotes/${quoteId}/like`, {}, { timeout: 4000 });
       const updatedQuote = response.data;
       
       if (currentQuote && currentQuote.id === quoteId) {
@@ -94,8 +149,14 @@ export function useQuotes() {
       
       return { success: true, likes: updatedQuote.likes };
     } catch (err) {
-      console.error('Error liking quote:', err);
-      return { success: false, error: 'Failed to update like.' };
+      console.warn('Error liking quote on server, updating locally:', err);
+      // Local UI bump if server is sleeping
+      const updatedLikes = (currentQuote?.likes || 0) + 1;
+      if (currentQuote && currentQuote.id === quoteId) {
+        setCurrentQuote(prev => ({ ...prev, likes: updatedLikes }));
+      }
+      setLikedQuoteIds(prev => prev.includes(quoteId) ? prev : [...prev, quoteId]);
+      return { success: true, likes: updatedLikes };
     }
   };
 
@@ -117,7 +178,6 @@ export function useQuotes() {
   const playPoetTTS = async (quoteToSpeak = currentQuote) => {
     if (!quoteToSpeak) return;
 
-    // Toggle stop if already playing
     if (isPlayingTTS) {
       stopPoetTTS();
       return;
@@ -126,7 +186,6 @@ export function useQuotes() {
     setTtsLoading(true);
 
     try {
-      // Option 2: Try Backend Neural Edge-TTS Stream
       const ttsUrl = `${API_BASE_URL}/quotes/${quoteToSpeak.id}/tts`;
       const audio = new Audio(ttsUrl);
       audioRef.current = audio;
@@ -143,7 +202,7 @@ export function useQuotes() {
       };
 
       audio.onerror = () => {
-        console.warn('Backend Edge-TTS stream failed/unavailable. Falling back to tuned Web Speech API...');
+        console.warn('Backend Edge-TTS stream unavailable. Falling back to tuned Web Speech API...');
         fallbackWebSpeechTTS(quoteToSpeak);
       };
     } catch (err) {
@@ -152,7 +211,7 @@ export function useQuotes() {
     }
   };
 
-  // Option 1 Fallback: Tuned Web Speech API with deep baritone pitch (0.7) and poetic rate (0.85)
+  // Option 1 Fallback: Tuned Web Speech API with deep baritone pitch (0.75) and poetic rate (0.84)
   const fallbackWebSpeechTTS = (quoteToSpeak) => {
     if (!('speechSynthesis' in window)) {
       setTtsLoading(false);
@@ -167,10 +226,9 @@ export function useQuotes() {
     const utterance = new SpeechSynthesisUtterance(textToSay);
 
     // Deep poetic tuning
-    utterance.pitch = 0.75; // Deeper baritone pitch
-    utterance.rate = 0.84;  // Thoughtful, poetic cadence
+    utterance.pitch = 0.75;
+    utterance.rate = 0.84;
 
-    // Attempt to pick a deep male/narrator voice
     const voices = window.speechSynthesis.getVoices();
     const deepVoice = voices.find(v => 
       (v.name.includes('Male') || v.name.includes('David') || v.name.includes('Google UK English Male') || v.name.includes('Prabhat') || v.name.includes('Natural')) && v.lang.startsWith('en')
@@ -218,7 +276,6 @@ export function useQuotes() {
       }
     }
 
-    // Fallback: Copy to clipboard & Twitter intent URL
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(`"${quoteToShare.text}" — ${quoteToShare.author}`)}`;
     window.open(twitterUrl, '_blank');
     navigator.clipboard.writeText(`"${quoteToShare.text}" — ${quoteToShare.author}`);
@@ -228,7 +285,7 @@ export function useQuotes() {
   // Add new quote to backend
   const addQuote = async (newQuoteData) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/quotes`, newQuoteData);
+      const response = await axios.post(`${API_BASE_URL}/quotes`, newQuoteData, { timeout: 6000 });
       setCurrentQuote(response.data);
       setPalette(prev => getRandomPalette(prev.id));
       await fetchAllQuotes();
@@ -246,7 +303,7 @@ export function useQuotes() {
   // Delete quote by ID
   const deleteQuote = async (quoteId) => {
     try {
-      await axios.delete(`${API_BASE_URL}/quotes/${quoteId}`);
+      await axios.delete(`${API_BASE_URL}/quotes/${quoteId}`, { timeout: 5000 });
       setQuotesList(prev => prev.filter(q => q.id !== quoteId));
       if (currentQuote && currentQuote.id === quoteId) {
         fetchRandomQuote();
@@ -268,7 +325,7 @@ export function useQuotes() {
   const openAddModal = () => setIsAddModalOpen(true);
   const closeAddModal = () => setIsAddModalOpen(false);
 
-  // Initial load
+  // Initial load: wake up backend silently while presenting instant content
   useEffect(() => {
     fetchRandomQuote();
     fetchAllQuotes();
