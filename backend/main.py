@@ -37,8 +37,10 @@ def startup_event():
     try:
         with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
             conn.execute(text("ALTER TABLE quotes ADD COLUMN IF NOT EXISTS likes INTEGER DEFAULT 0;"))
+            # Sync PostgreSQL sequence if sequence got behind
+            conn.execute(text("SELECT setval(pg_get_serial_sequence('quotes', 'id'), COALESCE(max(id), 1)) FROM quotes;"))
     except Exception as e:
-        print(f"Auto-migration note (likes column): {e}")
+        print(f"Startup migration/sequence note: {e}")
 
     # Seed DB with default quotes if empty
     try:
@@ -65,7 +67,6 @@ def get_random_quote(db: Session = Depends(get_db)):
         return quote
     except Exception as e:
         print(f"Error fetching random quote: {e}")
-        # Return fallback response if DB query encounters column issue
         raise HTTPException(status_code=500, detail="Database query error. Using client fallback.")
 
 @app.get("/quotes", response_model=List[schemas.QuoteResponse], tags=["Quotes"])
@@ -100,17 +101,39 @@ def get_popular_quotes(limit: int = 5, db: Session = Depends(get_db)):
 
 @app.post("/quotes", response_model=schemas.QuoteResponse, status_code=status.HTTP_201_CREATED, tags=["Quotes"])
 def create_quote(quote: schemas.QuoteCreate, db: Session = Depends(get_db)):
-    """Upload a new quote to the database."""
-    db_quote = models.Quote(
-        text=quote.text.strip(),
-        author=quote.author.strip() if quote.author else "Unknown",
-        category=quote.category.strip() if quote.category else "General",
-        likes=0
-    )
-    db.add(db_quote)
-    db.commit()
-    db.refresh(db_quote)
-    return db_quote
+    """Upload a new quote to the database with automatic sequence recovery."""
+    try:
+        db_quote = models.Quote(
+            text=quote.text.strip(),
+            author=quote.author.strip() if quote.author else "Unknown",
+            category=quote.category.strip() if quote.category else "General",
+            likes=0
+        )
+        db.add(db_quote)
+        db.commit()
+        db.refresh(db_quote)
+        return db_quote
+    except Exception as e:
+        db.rollback()
+        print(f"Initial insert note, attempting sequence sync: {e}")
+        try:
+            with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
+                conn.execute(text("SELECT setval(pg_get_serial_sequence('quotes', 'id'), COALESCE((SELECT max(id) FROM quotes), 1));"))
+            
+            db_quote = models.Quote(
+                text=quote.text.strip(),
+                author=quote.author.strip() if quote.author else "Unknown",
+                category=quote.category.strip() if quote.category else "General",
+                likes=0
+            )
+            db.add(db_quote)
+            db.commit()
+            db.refresh(db_quote)
+            return db_quote
+        except Exception as retry_err:
+            db.rollback()
+            print(f"Retry insert failed: {retry_err}")
+            raise HTTPException(status_code=500, detail="Failed to save quote to database.")
 
 @app.post("/quotes/{quote_id}/like", response_model=schemas.QuoteResponse, tags=["Quotes"])
 def like_quote(quote_id: int, db: Session = Depends(get_db)):
