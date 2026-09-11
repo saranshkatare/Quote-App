@@ -159,10 +159,19 @@ async def get_quote_tts(quote_id: int, db: Session = Depends(get_db)):
     try:
         import edge_tts
         
+        import re
         narration_text = f"{db_quote.text}. By {db_quote.author}."
-        voice = "en-IN-PrabhatNeural"
-        rate = "-12%"
-        pitch = "-10Hz"
+        
+        # Multi-language script detection for deep poet voice
+        is_devanagari = bool(re.search(r'[\u0900-\u097F]', narration_text))
+        if is_devanagari:
+            voice = "hi-IN-MadhurNeural"  # Deep Hindi baritone poet voice
+            rate = "-8%"
+            pitch = "-6Hz"
+        else:
+            voice = "en-IN-PrabhatNeural" # Deep Indian English/Hinglish male voice
+            rate = "-12%"
+            pitch = "-10Hz"
 
         communicate = edge_tts.Communicate(narration_text, voice, rate=rate, pitch=pitch)
         

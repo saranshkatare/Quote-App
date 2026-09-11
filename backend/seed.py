@@ -9,22 +9,28 @@ INITIAL_QUOTES = [
         "likes": 42
     },
     {
+        "text": "दुख में सुमिरन सब करे, सुख में करे न कोय । जो सुख में सुमिरन करे, तो दुख काहे को होय ॥",
+        "author": "कबीर दास",
+        "category": "हिंदी दोहे",
+        "likes": 48
+    },
+    {
+        "text": "पोथी पढ़ि पढ़ि जग मुआ, पंडित भया न कोय । ढाई आखर प्रेम का, पढ़े सो पंडित होय ॥",
+        "author": "कबीर दास",
+        "category": "हिंदी दोहे",
+        "likes": 45
+    },
+    {
+        "text": "विद्या ददाति विनयं विनयाद्याति पात्रताम् । पात्रत्वाद्धनमाप्नोति धनाद्धर्मं ततः सुखम् ॥",
+        "author": "हितोपदेश",
+        "category": "संस्कृत श्लोक",
+        "likes": 39
+    },
+    {
         "text": "Dukh mein simran sab kare, sukh mein kare na koye. Jo sukh mein simran kare, to dukh kahe ko hoye.",
         "author": "Kabir Das",
         "category": "Dohe",
         "likes": 38
-    },
-    {
-        "text": "Pothi padhi padhi jag mua, pandit bhaya na koye. Dhai akshar prem ka, padhe so pandit hoye.",
-        "author": "Kabir Das",
-        "category": "Dohe",
-        "likes": 29
-    },
-    {
-        "text": "Bura jo dekhn main chala, bura na milya koye. Jo dil khoja aapna, mujhse bura na koye.",
-        "author": "Kabir Das",
-        "category": "Dohe",
-        "likes": 35
     },
     {
         "text": "Simplicity is the ultimate sophistication.",
@@ -39,22 +45,10 @@ INITIAL_QUOTES = [
         "likes": 31
     },
     {
-        "text": "In the middle of difficulty lies opportunity.",
-        "author": "Albert Einstein",
-        "category": "Growth",
-        "likes": 27
-    },
-    {
         "text": "Khatri ke Pohe gives fuel to the body, Life ke Dohe gives peace to the mind.",
         "author": "Anonymous",
         "category": "Humor",
         "likes": 50
-    },
-    {
-        "text": "Do not dwell in the past, do not dream of the future, concentrate the mind on the present moment.",
-        "author": "Gautama Buddha",
-        "category": "Mindfulness",
-        "likes": 22
     }
 ]
 
@@ -70,4 +64,4 @@ def seed_database(db: Session):
             )
             db.add(quote)
         db.commit()
-        print("Database seeded with initial dohes & wisdom quotes successfully.")
+        print("Database seeded with initial multi-language dohes & wisdom quotes successfully.")

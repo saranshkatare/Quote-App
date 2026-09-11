@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { X, Plus, Sparkles, Send } from 'lucide-react';
+import { X, Plus, Send, Globe } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+const SUGGESTED_CATEGORIES = ['हिंदी दोहे', 'संस्कृत श्लोक', 'Life', 'Minimalism', 'Inspiration', 'Urdu Shayari'];
 
 export default function AddQuoteModal({ isOpen, onClose, onAddQuote, palette }) {
   const [text, setText] = useState('');
@@ -66,7 +68,10 @@ export default function AddQuoteModal({ isOpen, onClose, onAddQuote, palette }) 
                 </div>
                 <div>
                   <h2 className="text-xl font-serif font-bold text-white">Add New Quote or Dohe</h2>
-                  <p className="text-xs font-mono text-slate-400">Share your words of wisdom</p>
+                  <p className="text-xs font-mono text-slate-400 flex items-center gap-1.5 mt-0.5">
+                    <Globe className="w-3 h-3 text-slate-400" />
+                    <span>Supports all languages (Hindi, English, Sanskrit, etc.)</span>
+                  </p>
                 </div>
               </div>
 
@@ -93,7 +98,7 @@ export default function AddQuoteModal({ isOpen, onClose, onAddQuote, palette }) 
                 <textarea
                   rows={4}
                   required
-                  placeholder="Enter quote or dohe text..."
+                  placeholder="Enter quote in any language (e.g. दुख में सुमिरन सब करे, Pothi padhi padhi...)"
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                   className="w-full p-3.5 rounded-2xl glass-card border border-white/10 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-white/30 transition-colors resize-none font-serif leading-relaxed"
@@ -107,7 +112,7 @@ export default function AddQuoteModal({ isOpen, onClose, onAddQuote, palette }) 
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. Kabir Das, Khatri Ji"
+                    placeholder="e.g. कबीर दास, Kabir Das, Khatri Ji"
                     value={author}
                     onChange={(e) => setAuthor(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl glass-card border border-white/10 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-white/30 transition-colors"
@@ -120,7 +125,7 @@ export default function AddQuoteModal({ isOpen, onClose, onAddQuote, palette }) 
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. Dohe, Life, Inspiration"
+                    placeholder="e.g. हिंदी दोहे, Dohe, Life"
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl glass-card border border-white/10 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-white/30 transition-colors"
@@ -128,7 +133,22 @@ export default function AddQuoteModal({ isOpen, onClose, onAddQuote, palette }) 
                 </div>
               </div>
 
-              <div className="pt-4 flex items-center justify-end gap-3">
+              {/* Quick Category Tags */}
+              <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider mr-1">Suggestions:</span>
+                {SUGGESTED_CATEGORIES.map(tag => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => setCategory(tag)}
+                    className="px-2.5 py-0.5 rounded-full bg-white/5 hover:bg-white/15 text-[11px] font-mono text-slate-300 transition-colors border border-white/5"
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+
+              <div className="pt-4 flex items-center justify-end gap-3 border-t border-white/5">
                 <button
                   type="button"
                   onClick={onClose}

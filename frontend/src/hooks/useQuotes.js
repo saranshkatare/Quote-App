@@ -223,16 +223,28 @@ export function useQuotes() {
     const textToSay = `${quoteToSpeak.text}. By ${quoteToSpeak.author || 'Anonymous'}.`;
     const utterance = new SpeechSynthesisUtterance(textToSay);
 
-    utterance.pitch = 0.75;
-    utterance.rate = 0.84;
+    // Multi-language script detection (Devanagari vs English/Latin)
+    const isDevanagari = /[\u0900-\u097F]/.test(quoteToSpeak.text);
+
+    if (isDevanagari) {
+      utterance.lang = 'hi-IN';
+      utterance.pitch = 0.85;
+      utterance.rate = 0.82;
+    } else {
+      utterance.lang = 'en-IN';
+      utterance.pitch = 0.75;
+      utterance.rate = 0.84;
+    }
 
     const voices = window.speechSynthesis.getVoices();
-    const deepVoice = voices.find(v => 
-      (v.name.includes('Male') || v.name.includes('David') || v.name.includes('Google UK English Male') || v.name.includes('Prabhat') || v.name.includes('Natural')) && v.lang.startsWith('en')
-    ) || voices.find(v => v.lang.startsWith('en'));
+    const matchingVoice = voices.find(v => 
+      isDevanagari 
+        ? (v.lang.startsWith('hi') || v.name.includes('Hindi') || v.name.includes('Madhur') || v.name.includes('Swara'))
+        : (v.lang.startsWith('en') && (v.name.includes('Male') || v.name.includes('David') || v.name.includes('Google UK English Male') || v.name.includes('Prabhat')))
+    ) || voices.find(v => isDevanagari ? v.lang.startsWith('hi') : v.lang.startsWith('en'));
 
-    if (deepVoice) {
-      utterance.voice = deepVoice;
+    if (matchingVoice) {
+      utterance.voice = matchingVoice;
     }
 
     utterance.onstart = () => {
