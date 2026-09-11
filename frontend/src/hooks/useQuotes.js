@@ -79,6 +79,8 @@ export function useQuotes() {
   // Modals state
   const [isListModalOpen, setIsListModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [quoteToEdit, setQuoteToEdit] = useState(null);
 
   // Theme palette state
   const [palette, setPalette] = useState(() => getRandomPalette());
@@ -302,7 +304,6 @@ export function useQuotes() {
       created_at: new Date().toISOString()
     };
 
-    // Instant UI update
     setCurrentQuote(tempQuote);
     setQuotesList(prev => [tempQuote, ...prev]);
     setPalette(prev => getRandomPalette(prev.id));
@@ -316,6 +317,28 @@ export function useQuotes() {
       return { success: true };
     } catch (err) {
       console.warn('Backend quote submission note (saved locally):', err);
+      return { success: true };
+    }
+  };
+
+  // Update quote with optimistic update & backend PUT persistence
+  const updateQuote = async (quoteId, updatedData) => {
+    setQuotesList(prev => prev.map(q => q.id === quoteId ? { ...q, ...updatedData } : q));
+    if (currentQuote && currentQuote.id === quoteId) {
+      setCurrentQuote(prev => ({ ...prev, ...updatedData }));
+    }
+
+    try {
+      const response = await axios.put(`${API_BASE_URL}/quotes/${quoteId}`, updatedData, { timeout: 6000 });
+      if (response.data) {
+        setQuotesList(prev => prev.map(q => q.id === quoteId ? response.data : q));
+        if (currentQuote && currentQuote.id === quoteId) {
+          setCurrentQuote(response.data);
+        }
+      }
+      return { success: true };
+    } catch (err) {
+      console.warn('Backend update quote note (saved locally):', err);
       return { success: true };
     }
   };
@@ -347,6 +370,15 @@ export function useQuotes() {
   const openAddModal = () => setIsAddModalOpen(true);
   const closeAddModal = () => setIsAddModalOpen(false);
 
+  const openEditModal = (quote) => {
+    setQuoteToEdit(quote);
+    setIsEditModalOpen(true);
+  };
+  const closeEditModal = () => {
+    setIsEditModalOpen(false);
+    setQuoteToEdit(null);
+  };
+
   // Initial load
   useEffect(() => {
     fetchRandomQuote();
@@ -365,6 +397,8 @@ export function useQuotes() {
     likedQuoteIds,
     isListModalOpen,
     isAddModalOpen,
+    isEditModalOpen,
+    quoteToEdit,
     fetchRandomQuote,
     fetchAllQuotes,
     likeQuote,
@@ -372,10 +406,13 @@ export function useQuotes() {
     stopPoetTTS,
     shareQuote,
     addQuote,
+    updateQuote,
     deleteQuote,
     openListModal,
     closeListModal,
     openAddModal,
-    closeAddModal
+    closeAddModal,
+    openEditModal,
+    closeEditModal
   };
 }

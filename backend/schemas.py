@@ -10,6 +10,11 @@ class QuoteBase(BaseModel):
 class QuoteCreate(QuoteBase):
     pass
 
+class QuoteUpdate(BaseModel):
+    text: Optional[str] = Field(None, min_length=3)
+    author: Optional[str] = Field(None, min_length=1)
+    category: Optional[str] = Field(None, min_length=1)
+
 class QuoteResponse(QuoteBase):
     id: int
     likes: int = 0

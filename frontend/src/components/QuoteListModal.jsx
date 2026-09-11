@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { X, Search, Copy, Check, Trash2, Sparkles, Heart, Flame, Volume2 } from 'lucide-react';
+import { X, Search, Copy, Check, Trash2, Pencil, Sparkles, Heart, Flame, Volume2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function QuoteListModal({
@@ -7,6 +7,7 @@ export default function QuoteListModal({
   onClose,
   quotesList,
   onDeleteQuote,
+  onEditQuote,
   onLikeQuote,
   likedQuoteIds,
   onPlayTTS,
@@ -199,6 +200,15 @@ export default function QuoteListModal({
                             className="p-2 rounded-xl bg-white/5 hover:bg-white/15 text-slate-300 hover:text-white transition-colors"
                           >
                             <Volume2 className="w-4 h-4" />
+                          </button>
+
+                          {/* Edit Button */}
+                          <button
+                            onClick={() => onEditQuote(quote)}
+                            title="Edit Quote"
+                            className="p-2 rounded-xl bg-white/5 hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 transition-colors"
+                          >
+                            <Pencil className="w-4 h-4" />
                           </button>
 
                           {/* Copy Button */}

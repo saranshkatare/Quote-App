@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Quote as QuoteIcon, Sparkles, Heart, Volume2, VolumeX, Share2, Flame, Loader2, Check } from 'lucide-react';
+import { Quote as QuoteIcon, Sparkles, Heart, Volume2, VolumeX, Share2, Pencil, Flame, Loader2, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function QuoteDisplay({
@@ -13,7 +13,8 @@ export default function QuoteDisplay({
   onStopTTS,
   isPlayingTTS,
   ttsLoading,
-  onShareQuote
+  onShareQuote,
+  onEditQuote
 }) {
   const [likeAnimating, setLikeAnimating] = useState(false);
   const [shareSuccessMsg, setShareSuccessMsg] = useState('');
@@ -106,8 +107,8 @@ export default function QuoteDisplay({
                 )}
               </div>
 
-              {/* Interactive Toolbar: Deep Poet TTS 🔊, Like ❤️, Share 📲 */}
-              <div className="relative z-10 mt-8 pt-6 border-t border-white/5 flex items-center justify-center gap-4 sm:gap-6">
+              {/* Interactive Toolbar: Deep Poet TTS 🔊, Like ❤️, Share 📲, Edit ✏️ */}
+              <div className="relative z-10 mt-8 pt-6 border-t border-white/5 flex items-center justify-center gap-3 sm:gap-5 flex-wrap">
                 
                 {/* Deep Poet TTS Button */}
                 <button
@@ -143,6 +144,16 @@ export default function QuoteDisplay({
                     <Heart className={`w-4 h-4 transition-colors ${isLiked ? 'fill-rose-500 text-rose-500' : 'group-hover:text-rose-400'}`} />
                   </motion.div>
                   <span className="font-semibold">{quote.likes || 0}</span>
+                </button>
+
+                {/* Edit Button */}
+                <button
+                  onClick={() => onEditQuote(quote)}
+                  title="Edit Quote"
+                  className="flex items-center gap-2 px-4 py-2 rounded-full glass-card border border-white/10 hover:border-white/20 text-slate-300 hover:text-amber-300 transition-all duration-200 text-xs font-mono tracking-wider"
+                >
+                  <Pencil className="w-4 h-4 text-amber-400" />
+                  <span>Edit</span>
                 </button>
 
                 {/* Share Button */}

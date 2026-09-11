@@ -5,6 +5,7 @@ import QuoteDisplay from './components/QuoteDisplay';
 import ControlButtons from './components/ControlButtons';
 import QuoteListModal from './components/QuoteListModal';
 import AddQuoteModal from './components/AddQuoteModal';
+import EditQuoteModal from './components/EditQuoteModal';
 
 export default function App() {
   const {
@@ -19,17 +20,22 @@ export default function App() {
     likedQuoteIds,
     isListModalOpen,
     isAddModalOpen,
+    isEditModalOpen,
+    quoteToEdit,
     fetchRandomQuote,
     likeQuote,
     playPoetTTS,
     stopPoetTTS,
     shareQuote,
     addQuote,
+    updateQuote,
     deleteQuote,
     openListModal,
     closeListModal,
     openAddModal,
-    closeAddModal
+    closeAddModal,
+    openEditModal,
+    closeEditModal
   } = useQuotes();
 
   const isCurrentQuoteLiked = currentQuote ? likedQuoteIds.includes(currentQuote.id) : false;
@@ -74,6 +80,7 @@ export default function App() {
           isPlayingTTS={isPlayingTTS}
           ttsLoading={ttsLoading}
           onShareQuote={shareQuote}
+          onEditQuote={openEditModal}
         />
 
         <ControlButtons
@@ -94,6 +101,7 @@ export default function App() {
         onClose={closeListModal}
         quotesList={quotesList}
         onDeleteQuote={deleteQuote}
+        onEditQuote={openEditModal}
         onLikeQuote={likeQuote}
         likedQuoteIds={likedQuoteIds}
         onPlayTTS={playPoetTTS}
@@ -104,6 +112,14 @@ export default function App() {
         isOpen={isAddModalOpen}
         onClose={closeAddModal}
         onAddQuote={addQuote}
+        palette={palette}
+      />
+
+      <EditQuoteModal
+        isOpen={isEditModalOpen}
+        onClose={closeEditModal}
+        quoteToEdit={quoteToEdit}
+        onUpdateQuote={updateQuote}
         palette={palette}
       />
     </div>

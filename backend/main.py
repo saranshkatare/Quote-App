@@ -190,6 +190,24 @@ async def get_quote_tts(quote_id: int, db: Session = Depends(get_db)):
             detail="Neural TTS generation unavailable. Fallback to client speech synthesis."
         )
 
+@app.put("/quotes/{quote_id}", response_model=schemas.QuoteResponse, tags=["Quotes"])
+def update_quote(quote_id: int, quote_update: schemas.QuoteUpdate, db: Session = Depends(get_db)):
+    """Update an existing quote's text, author, or category."""
+    db_quote = db.query(models.Quote).filter(models.Quote.id == quote_id).first()
+    if not db_quote:
+        raise HTTPException(status_code=404, detail="Quote not found.")
+    
+    if quote_update.text is not None:
+        db_quote.text = quote_update.text.strip()
+    if quote_update.author is not None:
+        db_quote.author = quote_update.author.strip()
+    if quote_update.category is not None:
+        db_quote.category = quote_update.category.strip()
+        
+    db.commit()
+    db.refresh(db_quote)
+    return db_quote
+
 @app.delete("/quotes/{quote_id}", status_code=status.HTTP_200_OK, tags=["Quotes"])
 def delete_quote(quote_id: int, db: Session = Depends(get_db)):
     """Delete a quote by ID."""
