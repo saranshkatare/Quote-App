@@ -3,10 +3,14 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-# Default SQLite database path
+# Default SQLite database path or PostgreSQL from environment
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./quotes.db")
 
-# Handle sqlite specific connection arguments
+# Fix Render PostgreSQL URL scheme compatibility (postgres:// -> postgresql://)
+if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
+    SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+# Handle sqlite vs postgres connection arguments
 connect_args = {}
 if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
     connect_args = {"check_same_thread": False}
