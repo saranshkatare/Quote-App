@@ -3,7 +3,7 @@ import os
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import text
+from sqlalchemy import text, inspect
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
 from typing import List, Optional
@@ -33,17 +33,19 @@ def startup_event():
     # Ensure database tables exist
     models.Base.metadata.create_all(bind=engine)
     
-    # Auto-migrate: Add 'likes' column if missing in existing PostgreSQL / SQLite tables
-    with engine.connect() as conn:
-        try:
+    # Auto-migrate: Add 'likes' column with AUTOCOMMIT to prevent transaction locks/timeouts
+    try:
+        with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
             conn.execute(text("ALTER TABLE quotes ADD COLUMN IF NOT EXISTS likes INTEGER DEFAULT 0;"))
-            conn.commit()
-        except Exception as e:
-            print(f"Auto-migration note (likes column): {e}")
+    except Exception as e:
+        print(f"Auto-migration note (likes column): {e}")
 
     # Seed DB with default quotes if empty
-    db = next(get_db())
-    seed_database(db)
+    try:
+        db = next(get_db())
+        seed_database(db)
+    except Exception as e:
+        print(f"Database seed note: {e}")
 
 @app.get("/", tags=["Health Check"])
 def root():
@@ -56,13 +58,15 @@ def root():
 @app.get("/quotes/random", response_model=schemas.QuoteResponse, tags=["Quotes"])
 def get_random_quote(db: Session = Depends(get_db)):
     """Fetch a single random quote from the database."""
-    quote = db.query(models.Quote).order_by(func.random()).first()
-    if not quote:
-        raise HTTPException(
-            status_code=404,
-            detail="No quotes found in database."
-        )
-    return quote
+    try:
+        quote = db.query(models.Quote).order_by(func.random()).first()
+        if not quote:
+            raise HTTPException(status_code=404, detail="No quotes found in database.")
+        return quote
+    except Exception as e:
+        print(f"Error fetching random quote: {e}")
+        # Return fallback response if DB query encounters column issue
+        raise HTTPException(status_code=500, detail="Database query error. Using client fallback.")
 
 @app.get("/quotes", response_model=List[schemas.QuoteResponse], tags=["Quotes"])
 def get_all_quotes(
@@ -71,20 +75,28 @@ def get_all_quotes(
     db: Session = Depends(get_db)
 ):
     """Fetch all quotes, sorted by newest or most liked."""
-    query = db.query(models.Quote)
-    if category and category.upper() != "ALL":
-        query = query.filter(models.Quote.category.ilike(f"%{category}%"))
-    
-    if sort_by == "likes":
-        quotes = query.order_by(models.Quote.likes.desc(), models.Quote.created_at.desc()).all()
-    else:
-        quotes = query.order_by(models.Quote.created_at.desc()).all()
-    return quotes
+    try:
+        query = db.query(models.Quote)
+        if category and category.upper() != "ALL":
+            query = query.filter(models.Quote.category.ilike(f"%{category}%"))
+        
+        if sort_by == "likes":
+            quotes = query.order_by(models.Quote.likes.desc(), models.Quote.created_at.desc()).all()
+        else:
+            quotes = query.order_by(models.Quote.created_at.desc()).all()
+        return quotes
+    except Exception as e:
+        print(f"Error fetching quotes: {e}")
+        return []
 
 @app.get("/quotes/popular", response_model=List[schemas.QuoteResponse], tags=["Quotes"])
 def get_popular_quotes(limit: int = 5, db: Session = Depends(get_db)):
     """Fetch top liked quotes."""
-    return db.query(models.Quote).order_by(models.Quote.likes.desc()).limit(limit).all()
+    try:
+        return db.query(models.Quote).order_by(models.Quote.likes.desc()).limit(limit).all()
+    except Exception as e:
+        print(f"Error fetching popular quotes: {e}")
+        return []
 
 @app.post("/quotes", response_model=schemas.QuoteResponse, status_code=status.HTTP_201_CREATED, tags=["Quotes"])
 def create_quote(quote: schemas.QuoteCreate, db: Session = Depends(get_db)):
@@ -106,7 +118,7 @@ def like_quote(quote_id: int, db: Session = Depends(get_db)):
     db_quote = db.query(models.Quote).filter(models.Quote.id == quote_id).first()
     if not db_quote:
         raise HTTPException(status_code=404, detail="Quote not found.")
-    db_quote.likes += 1
+    db_quote.likes = (db_quote.likes or 0) + 1
     db.commit()
     db.refresh(db_quote)
     return db_quote
@@ -124,17 +136,13 @@ async def get_quote_tts(quote_id: int, db: Session = Depends(get_db)):
     try:
         import edge_tts
         
-        # Prepare text for deep narration
         narration_text = f"{db_quote.text}. By {db_quote.author}."
-        
-        # Deep poetic voice selection with rate & pitch adjustments for poetic baritone cadence
         voice = "en-IN-PrabhatNeural"
         rate = "-12%"
         pitch = "-10Hz"
 
         communicate = edge_tts.Communicate(narration_text, voice, rate=rate, pitch=pitch)
         
-        # Write to temporary mp3 file
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
         await communicate.save(temp_file.name)
 
